@@ -1,0 +1,689 @@
+---
+title: "Heart Dataset"
+author: "Nausheen"
+date: "10/04/2021"
+output:
+  word_document: default
+  html_document: default
+---
+
+            HEART FAILURE CLINICAL RECORDS DATA SET
+
+                1.  INTRODUCTION
+
+This dataset contains the medical records of 299 patients who had heart failure, collected during their follow-up period, where each patient profile has 13 clinical features.
+Death Event is the target variable. Based on the clinical features, we can predict the death event variable of the patient. It is a categorical variable(Classification).
+
+The dataset is taken from UCI Machine Learning Repository.The dataset link is
+http://archive.ics.uci.edu/ml/datasets/Heart+failure+clinical+records
+
+
+Code book of the variables: There are 13 clinical features
+- age: age of the patient (years)
+- anaemia: decrease of red blood cells or hemoglobin (boolean)
+- high blood pressure: if the patient has hypertension (boolean)
+- creatinine phosphokinase (CPK): level of the CPK enzyme in the blood (mcg/L)
+- diabetes: if the patient has diabetes (boolean)
+- ejection fraction: percentage of blood leaving the heart at each contraction (percentage)
+- platelets: platelets in the blood (kiloplatelets/mL)
+- sex: woman or man (binary)
+- serum creatinine: level of serum creatinine in the blood (mg/dL)
+- serum sodium: level of serum sodium in the blood (mEq/L)
+- smoking: if the patient smokes or not (boolean)
+- time: follow-up period (days)
+- [target] death event: if the patient deceased during the follow-up period (boolean)
+
+The Target Variable is the DEATH EVENT variable which is categorical and its a binary classification(0 and 1)
+
+---------------------------------------------------------------------------------------------
+      2. Data Preparation and Data Cleaning
+--------------------------------------------------------------------------------------------------
+
+
+2.1 import library
+
+```{r}
+library(randomForest)
+library(ggplot2)
+library(imbalance)
+library(caret)
+library(rpart)
+library(dplyr)
+library(corrplot)
+library(e1071)
+```
+
+
+              
+                       
+2.2 Read Dataset
+
+Loading the dataset from the CSV file and assigned to a variable name df.
+```{r}
+
+filename <- "heart_failure_clinical_records_dataset.csv"
+
+# Load the CSV file from the local directory 
+df <- read.csv(filename, header=T)
+
+```
+
+------------------------------------------------------------------------------------
+
+2.2.1 Explore the dataset
+
+Using dim gives the no. of Instances and no.of Attributes i.e Rows and Columns.
+
+```{r}
+dim(df) #Size of the dataset(rows,columns)
+
+```
+This dataset contains 299 instances and 13 variables.
+
+ .Death Event: indicates whether the patient deceased during the follow-up period
+                (1 = Dead, 0 = Alive). This is the target variable.
+ 
+ .Age: Patient Age in years
+ 
+ .Anaemia: Decrease of red blood cells or hemoglobin (1 = Yes, 0 = No)
+ 
+ .High Blood Pressure: if the patient has hypertension (1 = Yes, 0 = No)
+ 
+ .Creatinine Phosphokinase (CPK): level of the CPK enzyme in the blood (mcg/L)
+ 
+ .Diabetes: if the patient has diabetes (1 = Yes, 0 = No)
+ 
+ .Ejection Fraction: percentage of blood leaving the heart at each contraction (percentage)
+ 
+ .Platelets: platelets in the blood (kiloplatelets/mL)
+ 
+ .Sex: 1=woman , 0= man 
+ 
+ .Serum Creatinine: level of serum creatinine in the blood (mg/dL)
+ 
+ .Serum Sodium: level of serum sodium in the blood (mEq/L)
+ 
+ .Smoking: if the patient smokes or not (1 = Yes, 0 = No)
+ 
+ .Time: follow-up period (days)
+
+------------------------------------------------------------------------------------------------------
+
+2.2.2 Explore the Dataset using summary and stru()
+
+
+str() function in display the internal structure of dataset. It gives information about the rows(observations) and columns(variables) along with additional information like the names of the columns, class of each columns followed by initial observations of each of the columns.
+
+Using Summary command the summary statistics of the vector are calculated:
+It returns descriptive statistics such as the minimum, the first quantile, the median, the mean, the 3rd quantile, and the maximum value of our input data.The summary() command works for both matrix and data frame objects by summarizing the columns rather than the rows.
+
+
+```{r}
+summary(df)
+
+str(df)
+
+head(df)
+```
+
+
+
+2.2.3 Formating variables to the right type.
+
+Converting the binary variable to as factors, they are categorical variables but not numbers.
+
+```{r}
+df$DEATH_EVENT <- as.factor(df$DEATH_EVENT)
+#df$anaemia <- as.factor(df$anaemia)
+#df$diabetes <- as.factor(df$diabetes)
+#df$high_blood_pressure <- as.factor(df$high_blood_pressure)
+#df$sex <- as.factor(df$sex)
+#df$smoking <- as.factor(df$smoking)
+
+
+```
+
+
+2.2.4 Exploring dataset again after converting the variable as factors.
+
+```{r}
+summary(df)
+
+str(df)
+
+colnames(df) # Gives only the column name
+
+```
+
+
+2.1.5 NAN Analysis
+
+The  dataset contains elements of different datatypes like integers and numeric.There is no data cleaning or preprocessing required in this dataset as there are no missing data, variables are in the correct datatype with right format.so, imputation is not required. To detect any missing value the following command is used.After computation the obtained NAN value is zero(0).
+
+```{r}
+
+sum(is.na(df))
+
+```
+
+
+2.1.6 Rounding off the age to interger
+
+In Age column there are 2 values which are of Float type.So, using as.integer command age 
+variable is round off to integer.
+
+```{r}
+df$age <- as.integer(df$age)
+df
+
+```
+
+
+
+-------------------------------------------------------------------------------------------------
+
+              3.EXPLORATORY DATA ANALYSIS (EDA)
+-------------------------------------------------------------------------------------------------
+EDA is the process of analysing and visualizing the data to get a better understanding of data and insights from it.
+
+
+3.1. Univariate Data analysis:
+
+There are 6 categorical variables and 7 numeric variables.Boxplot and Histogram are used for plotting 
+the numeric variables. Barchart and Piecharts are used for the categorical variables.
+
+
+```{r}
+#1.Univariate Data analyis
+#boxplot(df$age, ylab = "Age Group", main = "Age")
+
+boxplot(df$creatinine_phosphokinase, ylab = "creatinine_phosphokinase", main = "creatinine_phosphokinase")
+boxplot(df$ejection_fraction, ylab = "ejection_fraction", main = "ejection_fraction")
+boxplot(df$platelets, ylab = "platelets", main = "platelets")
+boxplot(df$serum_creatinine, ylab = "serum_creatinine", main = "serum_creatinine")
+boxplot(df$serum_sodium, ylab = "serum_sodium", main = "serum_sodium")
+boxplot(df$time, ylab = "time", main = "time")
+
+
+hist(df$age,col="Dark blue",main="Histogram of Age",xlab="Age")
+hist(df$creatinine_phosphokinase,col="Dark blue",main="Histogram of creatinine_phosphokinase",xlab="creatinine_phosphokinase")
+hist(df$ejection_fraction,col="Dark blue",main="Histogram of ejection_fraction",xlab="ejection_fraction")
+hist(df$platelets,col="Dark blue",main="Histogram of platelets",xlab="platelets")
+hist(df$serum_creatinine,col="Dark blue",main="Histogram of serum_creatinine",xlab="serum_creatinine")
+hist(df$serum_sodium,col="Dark blue",main="Histogram of serum_sodium",xlab="serum_sodium")
+
+barplot(table(df$anaemia), main = "Bar plot for nb of anaemia")
+barplot(table(df$diabetes), main = "Bar plot for nb of diabetes")
+barplot(table(df$high_blood_pressure), main = "Bar plot for nb of high_blood_pressure")
+barplot(table(df$sex), main = "Bar plot for nb of sex")
+barplot(table(df$smoking), main = "Bar plot for nb of smoking")
+barplot(table(df$DEATH_EVENT), main = "Bar plot for nb of DEATH_EVENT")
+
+
+
+```
+
+
+
+```{r}
+#2 Bivariate analysis
+
+
+plot(df$age,df$creatinine_phosphokinase, main = "age v creatinine_phosphokinase", ylab = "creatinine_phosphokinase", xlab = "Age")
+
+plot(df$age,df$ejection_fraction, main = "age v ejection_fraction", ylab = "ejection_fraction", xlab = "Age")
+
+plot(df$age,df$platelets, main = "age v. platelets", ylab = "platelets", xlab = "Age")
+
+
+mosaicplot(table(df$anaemia,df$diabetes), ylab = "Anaemia", xlab = "Diabetes")
+
+
+# from the visualization above that we can say that most of the males who died had 
+#high caretinine_phosphokinase levels.
+
+ggplot(df, aes(factor(sex),creatinine_phosphokinase, fill = factor(DEATH_EVENT))) + geom_boxplot() +
+  ggtitle("Plot for Gender vs creatinine_phosphokinase") + xlab("Gender") +
+  labs( fill = "0=ALIVE, 1=DEAD")
+
+
+# The boxplot shows the relation between the patients who had diabetis with respect to their age.
+
+ggplot(df, aes(factor(diabetes),age, fill = factor(DEATH_EVENT))) + geom_boxplot() +
+  ggtitle(" Plot for Diabetes vs age") + xlab("Diabetes") +
+  labs( fill = "0=No, 1=Yes")
+
+```
+
+
+
+```{r}
+# 3 Maltivariate
+pairs(df)
+
+#we see from the pair plot that there is no corelation betweebn the variables.
+```
+
+```{r}
+
+corrplot(cor(df[,-c(2,4,6,10,11,13)]))
+# the correlation plot shows relation between numerical variables which means change in one #variable effects the other variable.we see that there is no correlation between the variables.
+
+```
+
+
+
+
+3.2 Summerizing the class distribution using Barplot for the Target Variable.
+
+It is observed that the DEATH_EVENT variable  bar plot is an imbalanced plot.To make it balance,
+We use a mwmote(Majority Weighted Minority Oversampling Technique) which is from the library 
+imbalance. mwmote is a Preprocessing Algorithms for Imbalanced Datasets.
+
+The bar plot show that the value 0(Alive) people are more comparatively to the 1(Dead) values.After 
+applying mwmote. Both the values of the Death_event variable are equal.
+
+
+```{r}
+
+# summerizing the class distribution 
+barplot(table(df$DEATH_EVENT), main = "Bar plot for nb of DEATH_EVENT")
+
+mwmotedf <- mwmote(df,classAttr = "DEATH_EVENT", numInstances = 100)
+
+mwmotedf <- rbind(df, mwmotedf)
+
+barplot(table(mwmotedf$DEATH_EVENT), main = "Bar plot for nb of DEATH_EVENT")
+
+
+```
+
+-------------------------------------------------------------------------------------------------
+
+                      4.SUPERVISED LEARNING EXPERIMENTS
+-------------------------------------------------------------------------------------------------
+As the dataset used here is for classification(the response variable is categorical) with the 
+target variable (DEATH_EVENT) as 2 classes(0-Alive, 1-Dead). The methodology used is k-fold 
+cross validation. The algorithms used are Random Forest, Support Vector Machine and Logistic Regression to train the dataset.
+
+
+
+
+
+4.1  SPLIT DATASET INTO TRAIN AND TEST
+-------------------------------------------------------------------------------------------------
+
+The set.seed() function sets the starting number used to generate a sequence of random numbers.
+It ensures that it generates the same result each time when the same process is run. 
+when the sample() function is used, the same sample is generated.
+
+Here we are splitting the dataset into 80% training set and 20% test set.
+
+
+Using the library caret,the sample( ) function and sampling with replacement is used, 
+i.e. each element of our data can be selected multiple times. In the following R code, we are specifying the replace argument to be TRUE:
+
+
+```{r}
+set.seed(123)
+
+index <- sample(2, nrow(mwmotedf), replace= TRUE, prob= c(0.8,0.2))
+
+train <- mwmotedf[index==1,]
+
+test <- mwmotedf[index==2,]
+
+
+View(train)
+View(test)
+
+```
+
+
+
+
+######################################################################################
+#                     4.2 METHODOLOGY
+#######################################################################################
+
+The k-fold cross-validation technique divides the data into K subsets(folds) of almost equal size. Out of these K folds, one subset is used as a validation set, and rest others are involved in training the model. 
+
+The complete working procedure of this method are:The idea here is to split your data in k distinct groups called folds. k is usually equal to 10 (10-fold cv). Each fold is then used as a test set for the model trained on the remaining k − 1 folds. we repeat k times for each fold.
+
+In the Following code setting seed to generate a reproducible random sampling.
+Then defining training control as cross-validation and value of K equal to 10.
+
+
+```{r}
+
+set.seed(123)  # reproducible random sampling
+train_control <- trainControl(method = "cv", number = 10)
+```
+
+
+########################################################################################
+#                       4.3  LOGISTIC  REGRESSION
+#######################################################################################
+
+The LR model is trained on the 80% of the data. The repeated cross validation.
+method is applied. with k-10 folds.
+
+By printing the summary of the model we can find out the important variables.
+From the coefficient table we can see that ejection_fraction, serum_creatine, age and time are the most significance ones. The table also show that sex is moderately significant variable.The high_blood_pressure
+is the variable of low significance.
+
+The model gives a good  Accuracy is 86%.
+The kappa value is 72%. The command below LR.fit$finalmodel shows the variables used to train the final model.
+
+The command LR.fit$resample shows the accuracy and Kappa values of the model in each fold.
+
+In the confusion matrix, out of 36 patients, 32 patients were correctly classified as  being Alive and 4 are incorrectly classified as being DEAD. 
+Out of 38 patients,  6 are incorrectly classified as  being Alive and 32 patients are correctly classified as being DEAD.
+
+
+
+
+
+```{r}
+
+set.seed(123)
+control <- trainControl(method = "repeatedcv",
+                        number = 10)
+LR.fit <- train(DEATH_EVENT ~ ., data = train,
+                trControl=control,
+                method="glm",
+                family="binomial")
+
+summary(LR.fit)
+
+
+```
+
+```{r}
+
+set.seed(123)
+control <- trainControl(method = "repeatedcv",
+                        number = 10)
+LR.fit <- train(DEATH_EVENT ~ ., data = train,
+                trControl=control,
+                method="glm",
+                family="binomial")
+
+summary(LR.fit)
+
+
+LR.fit
+LR.fit$finalModel
+LR.fit$resample
+
+plot(varImp(LR.fit,scale = T),main="Var Imp 10 Fold LR")
+
+y_pred2 = predict(LR.fit, test)
+y_pred2
+
+
+
+confusionMatrix(y_pred2,test$DEATH_EVENT)
+
+cm2 <- table(y_pred2,test$DEATH_EVENT)
+
+error2 <-(1- sum(diag(cm2))/sum(cm2))
+error2
+
+acc2 <- (sum(diag(cm2))/sum(cm2))
+acc2
+
+
+
+```
+
+
+
+
+
+################################################################################################
+#                        4.4   RANDOM FOREST
+#################################################################################################
+
+The RF model is trained on 80% of data.The methodology used is cross validation with k-10 folds.
+
+By printing the summary of the model we can find out the important variables are Time, serum_creatine, ejection_fraction, creatinine_phosphokenas are the most significance ones. The table also show that platelet and age is moderately important variable.
+The sex, diabetes are  the variable of lower side.
+
+
+In the confusion matrix, out of 34 patients, 31 patients were correctly classified as  being Alive and 3 are incorrectly classified as being DEAD. Out of 39 patients,  7 are incorrectly classified as  being Alive and 33 patients are correctly classified as being DEAD.
+
+
+
+The Accuracy of the model is 86%.
+Kappa value is 73%.
+
+```{r}
+
+#str(df)
+set.seed(123)
+
+train_control <- trainControl(method = "cv", number = 10)
+
+tuneGrid <- expand.grid(.mtry = c(100,200,300))
+
+rf.fit <- train(DEATH_EVENT ~ ., data = train, method='rf',metric= "Accuracy",
+                trControl = train_control, tuneGrid = tuneGrid)
+
+
+
+rf.fit
+plot(rf.fit)
+plot(varImp(rf.fit))
+rf.fit$bestTune
+
+
+classifier1 = randomForest(DEATH_EVENT ~ ., data = train, mtry=30)
+
+
+y_pred1 = predict(classifier1, test, type="class")
+y_pred1
+
+confusionMatrix(y_pred1,test$DEATH_EVENT)
+cm1 <- table(y_pred1,test$DEATH_EVENT)
+
+error1 <-(1- sum(diag(cm1))/sum(cm1))
+error1
+
+acc1 <- (sum(diag(cm1))/sum(cm1))
+acc1
+
+```
+
+
+
+
+
+
+
+
+
+
+################################################################################
+#                   4.4     SUPPORT VECTOR MACHINE--- LINEAR
+################################################################################
+
+The SVM model is applied on the training  data of 80% using cross validation of 10 folds. 
+The output of the model shows that the best model has an Accuracy of 85%.
+
+The model has been tuned by using Cost hyperparemeter which controls the error by improving the accuracy.
+The important variables observed from the trained model are time, serum_creatinine,age,ejection_fraction, 
+and serum_sodium.
+
+In the confusion matrix for SVM MODEL, out of 35 patients, 31 patients were correctly classified as  being 0(Alive) and 4 are incorrectly classified as being DEAD. 
+Out of 39 patients,  7 are incorrectly classified as  being Alive and 32 patients are correctly classified as being DEAD.
+
+
+```{r}
+set.seed(123)
+
+train_control2 <- trainControl(method="cv", number=10,
+                               search = 'random',
+                               savePredictions = T)
+
+
+
+
+k_classifier2 <- train(DEATH_EVENT ~ ., data = train,
+                       method='svmLinear',
+                       preProcess = c("center","scale"), 
+                       trcontrol=train_control2,
+                       tuneGrid = expand.grid(C = seq(2, 5, 
+                                                      length = 20)))
+print(k_classifier2)
+plot(k_classifier2)
+
+k_classifier2$bestTune
+plot(varImp(k_classifier2,scale = T),main="Var Imp 10 Fold SVM")
+```
+
+
+
+
+```{r}
+
+set.seed(123)
+
+train_control2 <- trainControl(method="cv", number=10,
+                               search = 'random',
+                               savePredictions = T)
+
+
+
+
+k_classifier2 <- train(DEATH_EVENT ~ ., data = train,
+                       method='svmLinear',
+                       preProcess = c("center","scale"), 
+                       trcontrol=train_control2,
+                       tuneGrid = expand.grid(C = seq(2, 5, 
+                                                      length = 20)))
+print(k_classifier2)
+
+k_classifier2$bestTune
+plot(varImp(k_classifier2,scale = T),main="Var Imp 10 Fold SVM")
+
+
+
+
+y_pred_svm = predict(k_classifier2, test, type="raw")
+y_pred_svm
+
+cm_svm <- table(y_pred_svm,test$DEATH_EVENT)
+cm_svm
+
+error_svm <-(1- sum(diag(cm_svm))/sum(cm_svm))
+error_svm
+
+acc_svm <- (sum(diag(cm_svm))/sum(cm_svm))
+acc_svm
+
+
+
+```
+
+
+####################################################################################3
+#                        4.4.2        SVM PLYNOMIAL
+#####################################################################################
+
+The SVM model is applied on the training  data of 80% using cross validation of 10 folds. 
+The output of the model shows that the best model has an Accuracy of 79%.
+
+The model has been tuned by using the scale hyperparameters which performs scaling of the data before testing it.degree hyperparemeter are used when kernel is set to poly.
+The important variables observed from the trained model are time, serum_creatinine,age,ejection_fraction,and serum_sodium.
+
+In the confusion matrix for SVM MODEL of POLynomial, out of 39 patients, 31 patients were correctly classified as  being 0(Alive) and 8 are incorrectly classified as being DEAD. 
+Out of 35 patients,  7 are incorrectly classified as  being Alive and 28 patients are correctly classified as being DEAD.
+
+
+```{r}
+Cs <- c(0.01,0.1,0.5,1,2)
+degrees <- c(2,3)
+scales <- c(1)
+tunegrid <- expand.grid(C=Cs, degree = degrees, scale = scales)
+
+set.seed(12345)
+
+svmPoly.fit <- train(DEATH_EVENT ~ ., data = train, method="svmPoly",
+trControl=train_control2, tuneGrid=tunegrid, preProcess = c("center", "scale"))
+
+
+
+
+print(svmPoly.fit)
+svmPoly.fit$bestTune
+plot(varImp(svmPoly.fit,scale = T),main="Var Imp 10 Fold SVM")
+  
+
+
+
+y_pred_svm_poly = predict(svmPoly.fit, test, type="raw")
+y_pred_svm_poly
+
+cm_svm_poly <- table(y_pred_svm_poly,test$DEATH_EVENT)
+cm_svm_poly
+
+error_svm_poly <-(1- sum(diag(cm_svm_poly))/sum(cm_svm_poly))
+error_svm_poly
+
+acc_svm_poly <- (sum(diag(cm_svm_poly))/sum(cm_svm_poly))
+acc_svm_poly
+
+```
+
+
+####################################################################################3
+                         CONCLUSION
+#####################################################################################
+
+
+Comparing the Models Performance we can see that four models have performed 
+good on the test data. The plot below shows comparison of all the models and 
+we can clearly see that Logistic Regresion and Svm_Linear the models have produced same accuracies of 85% on the test data. The SVM_poly accuracy are 79% which is the least.
+The random forest accuracy is 86%. The random forest accuracy is the best accuracy model.
+
+
+```{r}
+
+
+#report
+
+  data <- data.frame(
+  Alg_Name=c("RF","LR","SVM_linear","SVM_poly") ,  
+  Error_Rate=c(error1, error2,error_svm,error_svm_poly)
+)
+
+# Barplot
+ggplot(data, aes(x=Alg_Name, y=Error_Rate)) + 
+  geom_bar(stat = "identity", width=0.2) 
+
+data1 <- data.frame(
+  Alg_Name=c("RF","LR", "SVM_linear","SVM_poly") ,  
+  Accuracy_Rate=c(acc1, acc2,acc_svm,acc_svm_poly)
+)
+
+# Barplot
+ggplot(data1, aes(x=Alg_Name, y=Accuracy_Rate)) + 
+  geom_bar(stat = "identity", width=0.2) 
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
