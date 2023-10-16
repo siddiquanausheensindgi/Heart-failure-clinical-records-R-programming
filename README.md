@@ -1,5 +1,5 @@
-# Coursework-in-R-programming
-Data Science Development Coursework
+# Heart failure clinical records in -R-programming
+  R Programming Project
 
 
 This dataset contains the medical records of 299 patients who had heart failure, collected during their follow-up period, where each patient profile has 13 clinical features. Death Event is the target variable. Based on the clinical features, we can predict the death event variable of the patient. It is a categorical variable(Classification).
